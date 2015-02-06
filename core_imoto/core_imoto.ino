@@ -1,9 +1,11 @@
 
 #include <SD.h>
+#include <EEPROM.h>
 
 int RIGHT = 9;
 int LEFT = 8;
 int ULTRASONIC_CONSTANT = 58;
+int DELAY = 1000;
 
 // sense vars
 int triggerRight = 6;
@@ -21,7 +23,11 @@ File myFile;
 String fileName = "imoto.csv";
 
 // flag serial event
-char flagValue = '0';
+String inputString = "";         // a string to hold incoming data
+boolean stringComplete = false;  // whether the string is complete
+
+// name for arduino
+char sID[7];
 
 void setup() {
   Serial.begin(9600); 
@@ -40,6 +46,7 @@ void setup() {
     return;
   }
   //Serial.println("initialization done.");
+  inputString.reserve(50);
 }
 
 void loop() {
@@ -52,14 +59,18 @@ void loop() {
   //Serial.println("Distancia derecha" + (String)rightDistance + " cm");
   //Serial.println("Distancia izquierda" + (String)leftDistance + " cm");
   
-  // Download Data
-  if (flagValue == '1'){
-    downLoadData();
-    //Set mode to sense to avoid send again
-    flagValue = '0';
+  // switch for services exposed
+  if (stringComplete) {
+    // Download data
+    if (inputString == "d") {
+      downLoadData();
+      // clear the string:
+      inputString = "";
+      stringComplete = false;
+    }
   }
   
-  delay(1000);
+  delay(DELAY);
 }
 
 int senseUltraSonic(int side) {
@@ -113,7 +124,14 @@ void serialEvent() {
   while (Serial.available()) {
     // get the new byte:
     char inChar = (char)Serial.read(); 
-    flagValue = '1';
+    // add it to the inputString:
+    inputString += inChar;
+    // if the incoming character is a newline, set a flag
+    // so the main loop can do something about it:
+    if (inChar == '\n') {
+      inputString.replace("\n", "");
+      stringComplete = true;
+    } 
   }
 }
 
@@ -125,7 +143,7 @@ void downLoadData() {
     // read from the file until there's nothing else in it:
     while (myFile.available()) {
       Serial.write(myFile.read());
-    }
+  }
     // close the file:
     myFile.close();
     Serial.print("EOF");
@@ -133,9 +151,9 @@ void downLoadData() {
     // delete the file:
     SD.remove("imoto.csv");
     } 
-    else {
-      // if the file didn't open, print an error:
-      Serial.println("error opening " + fileName);
-    }
+  else {
+    // if the file didn't open, print an error:
+    Serial.println("error opening " + fileName);
+  }
 }
   
