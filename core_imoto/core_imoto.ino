@@ -8,7 +8,6 @@
 #define TIME_REQUEST  7    // ASCII bell character requests a time sync message 
 #define SYNC_INTERVAL 86400 //number of seconds between re-sync
 
-
 int RIGHT = 9;
 int LEFT = 8;
 int ULTRASONIC_CONSTANT = 58;
@@ -33,16 +32,20 @@ String fileName = "imoto.csv";
 String inputString = "";         // a string to hold incoming data
 boolean stringComplete = false;  // whether the string is complete
 
-// name for arduino
-char sID[7];
-
 //Vars to handle time
 time_t timeNow;
 time_t timeNowBck;
+
+// name for arduino
 String strTimeNow;
 
-// flag for downloading
-boolean flagDownloading = false;
+// header weaf
+String header;
+int sizeName;
+char nameComputer[7];
+
+String srtComputerName;
+String computer;
 
 void setup() {
   Serial.begin(9600); 
@@ -60,40 +63,76 @@ void setup() {
     Serial.println("initialization failed!");
     return;
   }
-  //Serial.println("initialization done.");
-  inputString.reserve(50);
   
+  inputString.reserve(50);
   setSyncInterval(SYNC_INTERVAL); //define sync interval
-  setSyncProvider( requestSync);  //set function to call when sync required
+  setSyncProvider(requestSync);  //set function to call when sync required
   
 }
 
 void loop() {
+  
   // Sensing
   rightDistance = senseUltraSonic(RIGHT);
   leftDistance = senseUltraSonic(LEFT);
   strTimeNow = strGetTime();
-  timeNowBck = getTime();
+  computer = getNameComputer();
+  
   // Saving sense data
-  saveData("IM0001",rightDistance, leftDistance, 1, strTimeNow);
-  //Serial.println("Distancia derecha" + (String)rightDistance + " cm");
-  //Serial.println("Distancia izquierda" + (String)leftDistance + " cm");
+  saveData(computer,rightDistance, leftDistance, 1, strTimeNow);
   
   // switch for services exposed
   if (stringComplete) {
+    
+    // Obtain weft head
+    header = inputString.substring(0,2);
+    
     // Download data
-    if (inputString == "d") {
-      flagDownloading = true;
+    if (header == "a1") {
       downLoadData();
-      flagDownloading = false;
       // clear the string:
       inputString = "";
       stringComplete = false;
-    } else {
-      Serial.println("el diablo!!!");
-      timeNow = inputString.toInt();
-      Serial.println(timeNow);
+    
+    // Sync date
+    } else if (header == "a2") {
+      timeNow = inputString.substring(2).toInt();
       syncTime(timeNow);
+      inputString = "";
+      stringComplete = false;
+    }
+    
+    // get date-time
+    else if (header == "a3") {
+      Serial.println(strGetTime());
+      inputString = "";
+      stringComplete = false;
+    }
+    
+    // Set name computer
+    else if (header == "a4") {
+      setNameComputer(inputString.substring(2));
+      inputString = "";
+      stringComplete = false;
+    }
+    
+    // Get name computer
+    else if (header == "a5") {
+      Serial.println(getNameComputer());
+      inputString = "";
+      stringComplete = false;
+    }
+    
+    // Delete data
+    else if (header == "a6") {
+      Serial.println("Delete file: imoto.csv");
+      SD.remove("imoto.csv");
+      inputString = "";
+      stringComplete = false;
+    }
+    
+    // default
+    else {
       inputString = "";
       stringComplete = false;
     }
@@ -102,6 +141,7 @@ void loop() {
   delay(DELAY);
 }
 
+// Sense ultrasonic sensor by side
 int senseUltraSonic(int side) {
   
   // Right sensor
@@ -125,6 +165,7 @@ int senseUltraSonic(int side) {
   return distance;
 }
 
+// Save data into file on sdcard
 void saveData(String idComputer, int rightDistance, int leftDistance, int sPeed, String date){
   // open the file. note that only one file can be open at a time,
   // so you have to close this one before opening another.
@@ -164,6 +205,7 @@ void serialEvent() {
   }
 }
 
+// Download data by pass serial port
 void downLoadData() {
   //Send data to the Serial port
   // re-open the file for reading:
@@ -186,15 +228,28 @@ void downLoadData() {
   }
 }
 
-void baptizeComputer(String name) {
+// Set name computer
+void setNameComputer(String name) {
+  name.toCharArray(nameComputer, 7);
+  for (int i = 0; i < 6; i++) {
+    EEPROM.write(i,nameComputer[i]);
+  }
+  Serial.println("Nombre configurado: " + name);
+}
+
+// get computer name 
+String getNameComputer() {
+  for (int i = 0; i < 6; i++) {
+    srtComputerName = srtComputerName + (char)EEPROM.read(i);
+  }
+  return srtComputerName;
 }
 
 //Service to sync Date and Time
 void syncTime(time_t pctime) {
-  Serial.println("En syncTime...");
   setTime(pctime);   // Sync Arduino clock to the time received on the serial port
+  Serial.println("Fecha y hora sincronizadas son las: " + strGetTime());
 }
-
 
 time_t requestSync()
 {
@@ -202,14 +257,13 @@ time_t requestSync()
   return 0; // the time will be sent later in response to serial mesg
 }
 
-
-//Service to get date and time
+// Service to get date and time
 time_t getTime(){
   time_t t = now();
   return t;
 }
 
-//Service to get date and time as String
+// Service to get date and time as String
 String strGetTime(){
   return (String)year()+"/"+(String)month()+"/"+(String)day()+" "+(String)hour()+":"+(String)minute()+":"+strPrintDigits(second());
 }
@@ -222,26 +276,10 @@ String strPrintDigits(int digits){
   return (String)digits;  
 }
 
-// digital clock display of the time
-void digitalClockDisplay(){
-  Serial.print(hour());
-  printDigits(minute());
-  printDigits(second());
-  Serial.print(" ");
-  Serial.print(day());
-  Serial.print(" ");
-  Serial.print(month());
-  Serial.print(" ");
-  Serial.print(year()); 
-  Serial.println(); 
-}  
-
+// utility function for digital clock display: prints preceding colon and leading 0
 void printDigits(int digits){
-  // utility function for digital clock display: prints preceding colon and leading 0
   Serial.print(":");
   if(digits < 10)
     Serial.print('0');
   Serial.print(digits);
 }
-
-
