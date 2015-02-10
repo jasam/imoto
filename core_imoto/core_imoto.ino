@@ -11,7 +11,7 @@
 int RIGHT = 9;
 int LEFT = 8;
 int ULTRASONIC_CONSTANT = 58;
-int DELAY = 1000;
+int DELAY = 2000;
 
 // sense vars
 int triggerRight = 6;
@@ -67,7 +67,7 @@ void setup() {
   inputString.reserve(50);
   setSyncInterval(SYNC_INTERVAL); //define sync interval
   setSyncProvider(requestSync);  //set function to call when sync required
-  
+  //computer = getNameComputer();
 }
 
 void loop() {
@@ -76,7 +76,6 @@ void loop() {
   rightDistance = senseUltraSonic(RIGHT);
   leftDistance = senseUltraSonic(LEFT);
   strTimeNow = strGetTime();
-  computer = getNameComputer();
   
   // Saving sense data
   saveData(computer,rightDistance, leftDistance, 1, strTimeNow);
@@ -230,6 +229,10 @@ void downLoadData() {
 
 // Set name computer
 void setNameComputer(String name) {
+  // write a 0 to all 512 bytes of the EEPROM
+  for (int i = 0; i < 512; i++) {
+    EEPROM.write(i, 0);
+  }  
   name.toCharArray(nameComputer, 7);
   for (int i = 0; i < 6; i++) {
     EEPROM.write(i,nameComputer[i]);
