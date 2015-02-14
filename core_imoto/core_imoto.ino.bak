@@ -11,7 +11,7 @@
 int RIGHT = 9;
 int LEFT = 8;
 int ULTRASONIC_CONSTANT = 58;
-int DELAY = 1000;
+int DELAY = 2000;
 
 // sense vars
 int triggerRight = 6;
@@ -76,7 +76,6 @@ void loop() {
   rightDistance = senseUltraSonic(RIGHT);
   leftDistance = senseUltraSonic(LEFT);
   strTimeNow = strGetTime();
-  computer = getNameComputer();
   
   // Saving sense data
   saveData(computer,rightDistance, leftDistance, 1, strTimeNow);
@@ -233,29 +232,19 @@ void downLoadData() {
 
 // Set name computer
 void setNameComputer(String name) {
-  int nameLong = name.length();
-  if (nameLong != 6) {
-    Serial.println("Nombre invalido. Debe tener 6 caracteres: " + name);
-    Serial.print("EOA");
-  }  else {
-    name.toUpperCase();
-    name.toCharArray(nameComputer, 7);
-    //Sets all of the bytes of the EEPROM to 0.
-    for (int i = 0; i < 512; i++){
-      EEPROM.write(i, 0);
-    }
-    //Set the name to the 6 first bytes of the EEPROM  
-    for (int i = 0; i < 6; i++) {
-      EEPROM.write(i,nameComputer[i]);
-    }
-    Serial.println("Nombre configurado: " + name);
-    Serial.print("EOA");
+  // write a 0 to all 512 bytes of the EEPROM
+  for (int i = 0; i < 512; i++) {
+    EEPROM.write(i, 0);
   }  
+  name.toCharArray(nameComputer, 7);
+  for (int i = 0; i < 6; i++) {
+    EEPROM.write(i,nameComputer[i]);
+  }
+  Serial.println("Nombre configurado: " + name);
 }
 
 // get computer name 
 String getNameComputer() {
-  srtComputerName = "";
   for (int i = 0; i < 6; i++) {
     srtComputerName = srtComputerName + (char)EEPROM.read(i);
   }
