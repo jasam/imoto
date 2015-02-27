@@ -1,7 +1,8 @@
 
 #include <SD.h>
 #include <EEPROM.h>
-#include <Time.h>  
+#include <Time.h>
+#include <LiquidCrystal.h>
 
 #define TIME_MSG_LEN  11   // time sync to PC is HEADER followed by unix time_t as ten ascii digits
 #define TIME_HEADER  'T'   // Header tag for serial time sync message
@@ -47,6 +48,9 @@ char nameComputer[7];
 String srtComputerName;
 String computer;
 
+// Vars for LED
+LiquidCrystal lcd(A3, A2, 5, A4, 3, 2);
+
 void setup() {
   Serial.begin(9600); 
   pinMode(triggerRight, OUTPUT);
@@ -68,6 +72,12 @@ void setup() {
   setSyncInterval(SYNC_INTERVAL); //define sync interval
   setSyncProvider(requestSync);  //set function to call when sync required
   computer = getNameComputer();
+  
+  // Activate screen constrast
+  analogWrite(A1,15);
+  // set up the LCD's number of columns and rows: 
+  lcd.begin(16, 2);
+  lcd.print("LCD test core!!");
 }
 
 void loop() {
@@ -81,6 +91,17 @@ void loop() {
   // Saving sense data
   saveData(computer,rightDistance, leftDistance, 1, strTimeNow);
   
+  // Send data to LCD
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("dd" + String(rightDistance));
+  lcd.setCursor(5, 0);
+  lcd.print("di" + String(leftDistance));
+  lcd.setCursor(10, 0);
+  lcd.print("ve77");
+  lcd.setCursor(0, 1);
+  lcd.print("f" + strTimeNow);
+    
   // switch for services exposed
   if (stringComplete) {
     
