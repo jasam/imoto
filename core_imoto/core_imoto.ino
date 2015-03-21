@@ -51,6 +51,14 @@ String computer;
 // Vars for LED
 LiquidCrystal lcd(A3, A2, 5, A4, 3, 2);
 
+// Speed vars
+int speedPin = A5;
+float duration;
+float velocity;
+//TO-DO refactor
+float radius = 0.0002794*100000.0;
+float vSpeed;
+
 void setup() {
   Serial.begin(9600); 
   pinMode(triggerRight, OUTPUT);
@@ -78,6 +86,9 @@ void setup() {
   // set up the LCD's number of columns and rows: 
   lcd.begin(16, 2);
   lcd.print("LCD test core!!");
+  
+  // Speed Init
+  pinMode(speedPin, INPUT);
 }
 
 void loop() {
@@ -87,9 +98,10 @@ void loop() {
   leftDistance = senseUltraSonic(LEFT);
   strTimeNow = strGetTime();
   computer = getNameComputer();
+  vSpeed = getSpeed(); 
   
   // Saving sense data
-  saveData(computer,rightDistance, leftDistance, 1, strTimeNow);
+  saveData(computer,rightDistance, leftDistance, vSpeed, strTimeNow);
   
   // Send data to LCD
   lcd.clear();
@@ -98,7 +110,9 @@ void loop() {
   lcd.setCursor(5, 0);
   lcd.print("di" + String(leftDistance));
   lcd.setCursor(10, 0);
-  lcd.print("ve77");
+  lcd.print("ve");
+  lcd.setCursor(13, 0);
+  lcd.print(vSpeed);
   lcd.setCursor(0, 1);
   lcd.print("f" + strTimeNow);
     
@@ -320,4 +334,11 @@ void printDigits(int digits){
   if(digits < 10)
     Serial.print('0');
   Serial.print(digits);
+}
+
+// Get speed from pulse
+float getSpeed(){
+  duration = (pulseIn(speedPin, HIGH)/36000.0);
+  velocity = (3.14159/4.0)*(radius/duration);
+  return velocity;
 }
