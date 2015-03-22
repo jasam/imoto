@@ -3,6 +3,7 @@
 #include <EEPROM.h>
 #include <Time.h>
 #include <LiquidCrystal.h>
+#include <stdlib.h>
 
 #define TIME_MSG_LEN  11   // time sync to PC is HEADER followed by unix time_t as ten ascii digits
 #define TIME_HEADER  'T'   // Header tag for serial time sync message
@@ -58,6 +59,9 @@ float velocity;
 //TO-DO refactor
 float radius = 0.0002794*100000.0;
 float vSpeed;
+char BUFFER[7];
+// (PI / 4)
+float PI_QUARTERS = 0.7853975;
 
 void setup() {
   Serial.begin(9600); 
@@ -87,7 +91,7 @@ void setup() {
   lcd.begin(16, 2);
   lcd.print("LCD test core!!");
   
-  // Speed Init
+  // Speed Pin
   pinMode(speedPin, INPUT);
 }
 
@@ -204,14 +208,14 @@ int senseUltraSonic(int side) {
 }
 
 // Save data into file on sdcard
-void saveData(String idComputer, int rightDistance, int leftDistance, int sPeed, String date){
+void saveData(String idComputer, int rightDistance, int leftDistance, float sPeed, String date){
   // open the file. note that only one file can be open at a time,
   // so you have to close this one before opening another.
   myFile = SD.open("imoto.csv", FILE_WRITE);
   
   // if the file opened okay, write to it:
   if (myFile) {
-    String registro = idComputer + "," + (String)rightDistance + "," + (String)leftDistance + "," + (String)sPeed + "," + date;
+    String registro = idComputer + "," + (String)rightDistance + "," + (String)leftDistance + "," + dtostrf(sPeed,3,2,BUFFER) + "," + date;
     myFile.println(registro);
     // close the file:
     myFile.close();
@@ -337,8 +341,10 @@ void printDigits(int digits){
 }
 
 // Get speed from pulse
+// Equation for lineal speed
+// v = (pi/4) * (radius/time)  
 float getSpeed(){
   duration = (pulseIn(speedPin, HIGH)/36000.0);
-  velocity = (3.14159/4.0)*(radius/duration);
+  velocity = PI_QUARTERS * (radius/duration);
   return velocity;
 }

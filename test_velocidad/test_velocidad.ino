@@ -6,7 +6,7 @@ void setup() {
   pinMode(13, OUTPUT);
   pinMode(8, INPUT);
   Serial.begin(9600);
-  dinamycDelay = 157.9969777;
+  dinamycDelay = 31.59939555;
   radius = 0.0002794;
 }
 
